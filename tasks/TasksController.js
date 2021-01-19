@@ -1,9 +1,9 @@
 const ObjectId = require('mongodb').ObjectID;
 
-const { TaskModel } = require("../models");
+const { task } = require("../models/task.model");
 
 exports.get = (req, res) => {
-    TaskModel.find()
+    task.find()
         .then(data => {
             res.status(200).send(data);
         })
@@ -28,7 +28,7 @@ exports.delete = (req, res) => {
                 error: "Invalid id"
             })
         }
-        TaskModel.findByIdAndDelete(new ObjectId(req.params.id))
+        task.findByIdAndDelete(new ObjectId(req.params.id))
             .then( data => {
                 res.status(200).json({
                     code: 200,
@@ -58,11 +58,11 @@ exports.addItem =  (req, res) => {
                 error: "Invalid name"
             });
     }
-        TaskModel.exists({name}).then(is_exsist => {
+        task.exists({name}).then(is_exsist => {
             if (is_exsist){
                 return res.status(208).json({code: 208});
             }
-            TaskModel.create({name, is_active: true})
+            task.create({name, is_active: true})
                 .then(data => {
                     res.status(201).json({
                         code: 201,
@@ -85,7 +85,7 @@ exports.addItem =  (req, res) => {
 };
 
 exports.deleteComp = (req, res) => {
-    TaskModel.deleteMany({is_active: false})
+    task.deleteMany({is_active: false})
         .then(() => {
             res.status(200).json({
                 code: 200
@@ -113,7 +113,7 @@ exports.changeStatus = (req, res) => {
             error: "Invalid request"
         })
     }
-    TaskModel.findByIdAndUpdate(id, {$set: {is_active: status}})
+    task.findByIdAndUpdate(id, {$set: {is_active: status}})
         .then((result) => {
             if (!result) {
                 throw result;
@@ -143,7 +143,7 @@ exports.changeAll = (req, res) => {
             code: 400
         })
     }
-    TaskModel.updateMany({is_active: !all_comp}, {$set: {is_active: all_comp}})
+    task.updateMany({is_active: !all_comp}, {$set: {is_active: all_comp}})
         .then((result) => {
             if (!result) {
                 throw result;
@@ -169,12 +169,12 @@ exports.changeName = (req, res) => {
             error: 'Invalid id'
         });
     }
-    TaskModel.exists({name}).then(is_exists => {
+    task.exists({name}).then(is_exists => {
         if (is_exists){
             return res.status(208).json({code: 208});
         }
-        TaskModel.findByIdAndUpdate(new ObjectId(id), {$set: {name}})
-            .then(result => {
+        task.findByIdAndUpdate(new ObjectId(id), {$set: {name}})
+            .then(() => {
                 res.status(200).json({code: 200});
             })
             .catch(() => {
