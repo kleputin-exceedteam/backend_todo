@@ -27,16 +27,4 @@ db.mongoose
         process.exit(1);
     });
 
-/*
-
-app.patch("/api/change_name", function (req, res) {
-    database.updateOne({_id: new objectId(req.body.id) }, {$set: {"name": req.body.name}},  function (err, result) {
-        if (err) {
-            return manageError(res, err.message, "Failed to change name");
-        }
-        res.status(200).json({code: 200, new_name: result});
-        console.log(req.body.name);
-    });
-});
-*/
 

@@ -16,44 +16,24 @@ exports.get = (req, res) => {
 };
 
 exports.delete = (req, res) => {
-    if (!ObjectId.isValid(req.params.id)){
+    if (!req.params.id){
         return res.status(400).json({
             code: 400,
-            error: "Invalid id"
+            error: 'No id in request'
         })
     }
-    TaskModel.findByIdAndDelete(new ObjectId(req.params.id))
-        .then( data => {
-            res.status(200).json({
-                code: 200,
-                delItem: data
-            });
-        })
-        .catch(err => {
-            res.status(500).json({
-                code: 500,
-                error: err
+        if (!ObjectId.isValid(req.params.id)){
+            return res.status(400).json({
+                code: 400,
+                error: "Invalid id"
             })
-        })
-};
-
-exports.addItem =  (req, res) => {
-    if (!req.body.name.length > 0){
-        return res.status(400).json({
-            code: 400,
-            error: "Invalid name"
-        });
-    }
-    TaskModel.exists({"name": req.body.name}).then(is_exsist => {
-        if (is_exsist){
-            return res.status(208).json({code: 208});
         }
-        TaskModel.create({"name": req.body.name, "is_active": true})
-            .then(data => {
-                res.status(201).json({
-                    code: 201,
-                    _id: data._id
-                })
+        TaskModel.findByIdAndDelete(new ObjectId(req.params.id))
+            .then( data => {
+                res.status(200).json({
+                    code: 200,
+                    delItem: data
+                });
             })
             .catch(err => {
                 res.status(500).json({
@@ -61,17 +41,51 @@ exports.addItem =  (req, res) => {
                     error: err
                 })
             })
-    })
-        .catch(err => {
-            res.status(500).json({
-                code: 500,
-                error: err
-            })
+    }
+
+
+exports.addItem =  (req, res) => {
+    const { name } = req.body;
+    if (!name) {
+        return res.status(400).json({
+            code: 400,
+            error: 'No name in request'
         })
+    }
+    if (name.length === 0){
+            return res.status(400).json({
+                code: 400,
+                error: "Invalid name"
+            });
+    }
+        TaskModel.exists({name}).then(is_exsist => {
+            if (is_exsist){
+                return res.status(208).json({code: 208});
+            }
+            TaskModel.create({name, is_active: true})
+                .then(data => {
+                    res.status(201).json({
+                        code: 201,
+                        _id: data._id
+                    })
+                })
+                .catch(err => {
+                    res.status(500).json({
+                        code: 500,
+                        error: err
+                    })
+                })
+        })
+            .catch(err => {
+                res.status(500).json({
+                    code: 500,
+                    error: err
+                })
+            })
 };
 
 exports.deleteComp = (req, res) => {
-    TaskModel.deleteMany({"is_active": false})
+    TaskModel.deleteMany({is_active: false})
         .then(() => {
             res.status(200).json({
                 code: 200
@@ -86,13 +100,20 @@ exports.deleteComp = (req, res) => {
 };
 
 exports.changeStatus = (req, res) => {
-    if (!ObjectId.isValid(req.body.id) || typeof(req.body.status) !== "boolean"){
+    const { status, id } = req.body;
+    if (status == null || !id){
+        return res.status(400).json({
+            code: 400,
+            error: 'No new status or id'
+        })
+    }
+    if (!ObjectId.isValid(id) || typeof(status) !== "boolean"){
         return res.status(400).json({
             code: 400,
             error: "Invalid request"
         })
     }
-    TaskModel.findByIdAndUpdate(req.body.id, {$set: {"is_active": req.body.status}})
+    TaskModel.findByIdAndUpdate(id, {$set: {is_active: status}})
         .then((result) => {
             if (!result) {
                 throw result;
@@ -110,19 +131,24 @@ exports.changeStatus = (req, res) => {
 };
 
 exports.changeAll = (req, res) => {
-    const all_req = req.body.all_comp;
-    if (typeof(all_req) !== "boolean"){
+    const { all_comp } = req.body;
+    if (all_comp == null){
+        return res.status(400).json({
+            code: 400,
+            error: 'No boolean state in request'
+        })
+    }
+    if (typeof(all_comp) !== "boolean"){
         return res.status(400).json({
             code: 400
         })
     }
-    TaskModel.updateMany({"is_active": !all_req}, {$set: {"is_active": all_req}})
+    TaskModel.updateMany({is_active: !all_comp}, {$set: {is_active: all_comp}})
         .then((result) => {
             if (!result) {
                 throw result;
             }
             res.status(200).json({code: 200});
-            console.log(result);
         })
         .catch(() => {
             res.status(500).json({code: 500});
@@ -130,16 +156,25 @@ exports.changeAll = (req, res) => {
 };
 
 exports.changeName = (req, res) => {
-    if (!ObjectId.isValid(req.body.id) || !(req.body.name.length > 0)){
-        return res.status(400).json({code: 400});
+    const { id, name } = req.body;
+    if (!id || !name){
+        return res.status(400).json({
+            code: 400,
+            error: 'No new name or id in request'
+        })
     }
-    TaskModel.exists({"name": req.body.name}).then(is_exists => {
+    if (!ObjectId.isValid(id) || !(name.length > 0)){
+        return res.status(400).json({
+            code: 400,
+            error: 'Invalid id'
+        });
+    }
+    TaskModel.exists({name}).then(is_exists => {
         if (is_exists){
             return res.status(208).json({code: 208});
         }
-        TaskModel.findByIdAndUpdate(new ObjectId(req.body.id), {$set: {"name" : req.body.name}})
+        TaskModel.findByIdAndUpdate(new ObjectId(id), {$set: {name}})
             .then(result => {
-                console.log(result);
                 res.status(200).json({code: 200});
             })
             .catch(() => {
