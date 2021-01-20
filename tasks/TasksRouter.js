@@ -1,14 +1,15 @@
 const TasksController = require('./TasksController');
 const express = require("express");
+const auth = require('../Authentication/middleware.auth');
 
 const router = express.Router();
 
-router.get('/', TasksController.get);
-router.delete('/delete/:id', TasksController.delete);
-router.post('/add', TasksController.addItem);
+router.get('/', auth, TasksController.get);
+router.delete('/delete/:id', auth, TasksController.delete);
+router.post('/add', auth, TasksController.addItem);
 router.delete('/delete_comp', TasksController.deleteComp);
-router.patch('/change_status', TasksController.changeStatus);
-router.patch('/change_all', TasksController.changeAll);
-router.patch('/change_name', TasksController.changeName);
+router.patch('/change_status', auth, TasksController.changeStatus);
+router.patch('/change_all', auth, TasksController.changeAll);
+router.patch('/change_name', auth, TasksController.changeName);
 
 module.exports = router;

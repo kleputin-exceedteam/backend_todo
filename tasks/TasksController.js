@@ -1,9 +1,14 @@
 const ObjectId = require('mongodb').ObjectID;
 
-const { task } = require("../models/task.model");
+const { tasks } = require("../models");
 
 exports.get = (req, res) => {
-    task.find()
+    const { id } = req.user;
+    if (!id) { res.status(400).json({
+        code: 400,
+        error: 'Auth error!'
+    })}
+    tasks.find({user: id})
         .then(data => {
             res.status(200).send(data);
         })
@@ -28,7 +33,7 @@ exports.delete = (req, res) => {
                 error: "Invalid id"
             })
         }
-        task.findByIdAndDelete(new ObjectId(req.params.id))
+        tasks.findByIdAndDelete(new ObjectId(req.params.id))
             .then( data => {
                 res.status(200).json({
                     code: 200,
@@ -45,6 +50,11 @@ exports.delete = (req, res) => {
 
 
 exports.addItem =  (req, res) => {
+    const { id } = req.user;
+    if (!id) { res.status(400).json({
+        code: 400,
+        error: 'Auth error!'
+    })}
     const { name } = req.body;
     if (!name) {
         return res.status(400).json({
@@ -58,34 +68,27 @@ exports.addItem =  (req, res) => {
                 error: "Invalid name"
             });
     }
-        task.exists({name}).then(is_exsist => {
-            if (is_exsist){
-                return res.status(208).json({code: 208});
-            }
-            task.create({name, is_active: true})
-                .then(data => {
-                    res.status(201).json({
-                        code: 201,
-                        _id: data._id
-                    })
-                })
-                .catch(err => {
-                    res.status(500).json({
-                        code: 500,
-                        error: err
-                    })
-                })
-        })
-            .catch(err => {
-                res.status(500).json({
-                    code: 500,
-                    error: err
-                })
+    tasks.findOneAndUpdate({name}, {name, is_active: true, user: id},
+        {upsert: true, new: true, rawResult: true}, (err, result) => {
+        if (err) return res.status(500).json({
+            error: "Server error!"
+        });
+        if (result.lastErrorObject.updatedExisting){
+            return res.status(208).json({
+                code: 208
             })
+        }
+        return res.status(201).json({
+            code: 201,
+            _id: result.value._id
+        })
+    })
 };
 
 exports.deleteComp = (req, res) => {
-    task.deleteMany({is_active: false})
+    const { id } = req.user;
+    if (!id) return res.status(500).json({error: 'Auth error!'});
+    tasks.deleteMany({is_active: false, user: id})
         .then(() => {
             res.status(200).json({
                 code: 200
@@ -113,7 +116,7 @@ exports.changeStatus = (req, res) => {
             error: "Invalid request"
         })
     }
-    task.findByIdAndUpdate(id, {$set: {is_active: status}})
+    tasks.findByIdAndUpdate(id, {$set: {is_active: status}})
         .then((result) => {
             if (!result) {
                 throw result;
@@ -131,6 +134,9 @@ exports.changeStatus = (req, res) => {
 };
 
 exports.changeAll = (req, res) => {
+    const { id } = req.user;
+    if (!id) return res.status(500).json({error: 'Auth error!'});
+
     const { all_comp } = req.body;
     if (all_comp == null){
         return res.status(400).json({
@@ -143,7 +149,7 @@ exports.changeAll = (req, res) => {
             code: 400
         })
     }
-    task.updateMany({is_active: !all_comp}, {$set: {is_active: all_comp}})
+    tasks.updateMany({is_active: !all_comp, user: id}, {$set: {is_active: all_comp}})
         .then((result) => {
             if (!result) {
                 throw result;
@@ -169,11 +175,11 @@ exports.changeName = (req, res) => {
             error: 'Invalid id'
         });
     }
-    task.exists({name}).then(is_exists => {
+    tasks.exists({name}).then(is_exists => {
         if (is_exists){
             return res.status(208).json({code: 208});
         }
-        task.findByIdAndUpdate(new ObjectId(id), {$set: {name}})
+        tasks.findByIdAndUpdate(new ObjectId(id), {$set: {name}})
             .then(() => {
                 res.status(200).json({code: 200});
             })
