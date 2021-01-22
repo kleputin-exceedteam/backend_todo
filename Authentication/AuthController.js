@@ -16,45 +16,68 @@ exports.login = async (req, res) => {
     try{
         let User = await user.findOne({username});
         if (!User){
-            return res.status(400).json({
-                error: "User not exist"
+            return res.status(404).json({
+                code: 404,
+                mgs: "User not exist"
             });
         }
         const isMatch = await bcrypt.compare(password, User.password);
         if (!isMatch){
-            return res.status(400).json({
-                error: "Incorrect password!"
+            return res.status(406).json({
+                code: 406,
+                msg: "Incorrect password!"
             })
         }
-        jwt.sign(
-            {
-                user: {
-                    id: User._id
-                }
-            },
-            "randomString", {expiresIn: 10000},
-            (err, token) => {
-                if (err) throw err;
-                return res.status(200).json({
-                    token
-                });
-            }
+        const payload = {user: {
+            id: User._id
+            }}
+        const token = jwt.sign(
+            payload,
+            "randomString", {expiresIn: 2},
         );
+        const refreshToken = jwt.sign(
+            payload,
+            "randomString", {expiresIn: 30000},
+        );
+        return res.status(200).json({
+            token: token,
+            refreshToken: refreshToken
+        });
     }catch (e) {
         res.status(500).send('Server error');
     }
 }
 
-exports.get = async (req, res) => {
-    const token = req.header("token");
-    const decoded = jwt.verify(token, "randomString");
-    const User = decoded.user;
-    try{
-        const result = await user.findById(User.id);
-        return res.json(result);
-    } catch (e ) {
-        return res.status(500).json({
-            error: "Server error!"
+exports.refresh = (req, res) => {
+    console.log('refreshing token');
+    const {refToken} = req.body;
+    try {
+        const decoded = jwt.verify(refToken, "randomString");
+        if (!decoded) {
+            return res.status(401).json({
+                message: "Refresh token is not valid"
+            })
+        }
+        const payload = {
+            user: {
+                id: decoded.user.id
+            }
+        }
+        const token = jwt.sign(
+            payload,
+            "randomString", {expiresIn: 2},
+        );
+        const refreshToken = jwt.sign(
+            payload,
+            "randomString", {expiresIn: 10},
+        );
+        return res.status(200).json({
+            token: token,
+            refreshToken: refreshToken
+        });
+    } catch (e) {
+        return res.status(401).json({
+            message: "Refresh token is not valid"
         })
     }
 }
@@ -76,7 +99,8 @@ exports.signUp =
                 username
             });
             if (NewUser) {
-                return res.status(400).json({
+                return res.status(208).json({
+                    code: 208,
                     msg: "User Already Exists"
                 });
             }
@@ -95,18 +119,18 @@ exports.signUp =
                     id: User.id
                 }
             };
-            jwt.sign(
+            const token = jwt.sign(
                 payload,
-                "randomString", {
-                    expiresIn: 10000
-                },
-                (err, token) => {
-                    if (err) throw err;
-                    res.status(200).json({
-                        token
-                    });
-                }
+                "randomString", {expiresIn: 2},
             );
+            const refreshToken = jwt.sign(
+                payload,
+                "randomString", {expiresIn: 30000},
+            );
+            return res.status(200).json({
+                token: token,
+                refreshToken: refreshToken
+            });
         } catch (err) {
             console.log(err.message);
             res.status(500).send("Error in Saving");

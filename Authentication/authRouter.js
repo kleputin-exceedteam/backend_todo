@@ -10,7 +10,7 @@ router.post('/login', [
         min: 6
     })
 ], AuthController.login);
-router.get('/user', AuthController.get);
+router.post('/refresh', AuthController.refresh);
 router.post('/signup', [
     check("username", "Please enter a valid username").not().isEmpty(),
     check("password", "Please enter a valid password").isLength({
